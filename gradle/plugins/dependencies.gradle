@@ -17,6 +17,11 @@ dependencies {
         because('Starter para desenvolvimento de aplicativos web com Spring Boot')
     }
 
+    implementation ('org.springframework.boot:spring-boot-starter-mail'){
+        because("Starter para envio de email com spring boot")
+    }
+
+
     implementation('org.springframework.boot:spring-boot-starter-amqp') {
         because('Starter para integração com o RabbitMQ')
     }
