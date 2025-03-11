@@ -1,7 +1,9 @@
 package br.com.daniel.emailservice.listeners;
 
+import br.com.daniel.emailservice.models.enums.OperationEnum;
 import br.com.daniel.emailservice.services.EmailService;
 import br.com.userservice.commonslib.model.dtos.OrderCreatedMessage;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.amqp.rabbit.annotation.Exchange;
@@ -26,7 +28,19 @@ public class OrderListener {
                     key = "rk.orders.create"
             )
     )
-    public void listener(final OrderCreatedMessage orderCreatedMessage) {
+    public void listener(final OrderCreatedMessage orderCreatedMessage) throws MessagingException {
         log.info("Ordem de serviço recebida: {}", orderCreatedMessage);
-        emailService.sendMail(orderCreatedMessage);    }
+        emailService.sendHtmlMail(orderCreatedMessage, OperationEnum.ORDER_CREATED);    }
+
+    @RabbitListener(
+            bindings = @QueueBinding(
+                    value = @Queue(value = "newhelpdesk"),
+                    exchange = @Exchange(value = "newhelpdesk", type = "topic"),
+                    key = "rk.orders.update"
+            )
+    )
+    public void listenerUpdate(final OrderCreatedMessage orderCreatedMessage) throws MessagingException {
+        log.info("Ordem de serviço atualizado: {}", orderCreatedMessage);
+        emailService.sendHtmlMail(orderCreatedMessage, OperationEnum.ORDER_UPDATED);
+    }
 }

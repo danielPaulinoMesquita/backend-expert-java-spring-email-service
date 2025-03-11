@@ -1,13 +1,16 @@
 package br.com.daniel.emailservice.services;
 
+import br.com.daniel.emailservice.models.enums.OperationEnum;
+import br.com.daniel.emailservice.utils.EmailUtils;
 import br.com.userservice.commonslib.model.dtos.OrderCreatedMessage;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 @Log4j2
 @Service
@@ -15,48 +18,41 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
 
-    @Value("${mail.text-created-order-confirmation}")
-    private String textCreatedOrderConfirmation;
+    public void sendHtmlMail(
+            final OrderCreatedMessage orderDTO,
+            OperationEnum operation
+    ) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
 
-    public void sendMail(final OrderCreatedMessage order) {
-        log.info("Enviando e-mail para o cliente: {}", order.getCustomer().email());
+        String process = getContext(orderDTO, operation);
 
-        SimpleMailMessage message = getSimpleMailMessage(order);
+        EmailUtils.getMimeMessage(message, process, orderDTO, "Ordem de serviço criada com sucesso");
 
-        try {
-            mailSender.send(message);
-            log.info("E-mail enviado com sucesso para o cliente: {}", order.getCustomer().email());
-        } catch (MailException e) {
-            switch (e.getClass().getSimpleName()) {
-                case "MailAuthenticationException":
-                    log.error("Erro de autenticação ao enviar e-mail: {}", e.getMessage());
-                    break;
-                case "MailSendException":
-                    log.error("Erro ao enviar e-mail: {}", e.getMessage());
-                    break;
-                default:
-                    log.error("Erro inesperado ao enviar e-mail: {}", e.getMessage());
-                    break;
+        mailSender.send(message);
+    }
+
+    private String getContext(OrderCreatedMessage orderDTO, OperationEnum operation) {
+        Context context = new Context();
+
+        return switch (operation) {
+            case ORDER_CREATED -> {
+                log.info("Enviando email de criação de ordem de serviço");
+                context = EmailUtils.getContextToCreatedOrder(orderDTO);
+                yield templateEngine.process("email/order-created", context);
             }
-        }
+            case ORDER_UPDATED -> {
+                log.info("Enviando email de atualização de ordem de serviço");
+//                 context = EmailUtils.getContextToUpdatedOrder(orderDTO);
+                yield templateEngine.process("email/order-updated", context);
+            }
+            case ORDER_DELETED -> {
+                log.info("Enviando email de exclusão de ordem de serviço");
+                // context = EmailUtils.getContextToDeletedOrder(orderDTO);
+                yield templateEngine.process("email/order-deleted", context);
+            }
+        };
     }
 
-    private SimpleMailMessage getSimpleMailMessage(OrderCreatedMessage order) {
-        String subject = "Ordem de serviço criada com sucesso";
-        String text = String.format(textCreatedOrderConfirmation,
-                order.getCustomer().name(),
-                order.getOrderResponse().id(),
-                order.getOrderResponse().title(),
-                order.getOrderResponse().description(),
-                order.getOrderResponse().createdAt(),
-                order.getOrderResponse().status(),
-                order.getRequester().name());
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setSubject(subject);
-        message.setTo(order.getCustomer().email());
-        message.setText(text);
-        return message;
-    }
 }
