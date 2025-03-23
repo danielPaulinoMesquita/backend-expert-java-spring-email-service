@@ -1,9 +1,18 @@
 spring:
   application:
     name: 'email-service'
+  profiles:
+    active: ${PROFILE_ACTIVE}
+  rabbitmq:
+    addresses: ${RABBITMQ_ADDRESSES}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
 mail:
   host: ${MAIL_HOST:smtp.gmail.com}
   port: ${MAIL_PORT:587}
   username: ${MAIL_USERNAME:darcouver@gmail.com}
   password: ${MAIL_PASSWORD}
   protocol: ${MAIL_PROTOCOL:smtp}
+server:
+  port: ${PORT:0}
